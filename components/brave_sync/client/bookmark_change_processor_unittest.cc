@@ -80,7 +80,6 @@ class BraveBookmarkChangeProcessorTest : public testing::Test {
   void TearDown() override {
     change_processor()->Stop();
     change_processor_.reset();
-    InvalidateBookmarkChangeProcessor();
     profile_.reset();
   }
 

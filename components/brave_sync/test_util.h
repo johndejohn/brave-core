@@ -60,8 +60,6 @@ std::unique_ptr<Profile> CreateBraveSyncProfile(const base::FilePath& path);
 std::unique_ptr<KeyedService> BuildFakeBookmarkModelForTests(
      content::BrowserContext* context);
 
-void InvalidateBookmarkChangeProcessor();
-
 }  // namespace brave_sync
 
 #endif  // BRAVE_COMPONENTS_BRAVE_SYNC_TEST_UTIL_H_

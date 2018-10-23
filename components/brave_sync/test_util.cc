@@ -42,12 +42,11 @@ std::unique_ptr<KeyedService> BuildFakeBookmarkModelForTests(
   using namespace bookmarks;
   std::unique_ptr<TestBookmarkClient> client(new TestBookmarkClient());
   BookmarkPermanentNodeList extra_nodes;
-  extern int64_t deleted_node_id;
-  deleted_node_id = 0xDE1E7ED40DE;
 
-  auto node = std::make_unique<BookmarkPermanentNode>(deleted_node_id);
+  auto node = std::make_unique<BookmarkPermanentNode>(0xDE1E7ED40DE);
   node->set_type(bookmarks::BookmarkNode::FOLDER);
   node->set_visible(false);
+  // This is hard-coded title and cannot be changed
   node->SetTitle(base::UTF8ToUTF16("Deleted Bookmarks"));
 
   extra_nodes.push_back(std::move(node));
@@ -55,12 +54,6 @@ std::unique_ptr<KeyedService> BuildFakeBookmarkModelForTests(
   std::unique_ptr<BookmarkModel> model(
       TestBookmarkClient::CreateModelWithClient(std::move(client)));
   return model;
-}
-
-void InvalidateBookmarkChangeProcessor() {
-  extern bookmarks::BookmarkNode* deleted_node_root;
-  DCHECK_NE(deleted_node_root, nullptr);
-  deleted_node_root = nullptr;
 }
 
 }  // namespace
