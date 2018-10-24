@@ -4,6 +4,7 @@
 
 #include "brave/browser/brave_browser_main_extra_parts.h"
 
+#include "brave/browser/auto_import_muon.h"
 #include "brave/common/resource_bundle_helper.h"
 
 BraveBrowserMainExtraParts::BraveBrowserMainExtraParts() {
@@ -14,4 +15,8 @@ BraveBrowserMainExtraParts::~BraveBrowserMainExtraParts() {
 
 void BraveBrowserMainExtraParts::PreCreateThreads() {
   brave::InitializeResourceBundle();
+}
+
+void BraveBrowserMainExtraParts::PreMainMessageLoopRun() {
+  brave::AutoImportMuon();
 }
