@@ -3,6 +3,8 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "brave/browser/auto_import_muon.h"
+
+#include "brave/browser/brave_browser_process_impl.h"
 #include "brave/common/brave_switches.h"
 
 #include "base/command_line.h"
@@ -10,6 +12,7 @@
 #include "base/run_loop.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/importer/importer_list.h"
+#include "chrome/browser/profiles/profile_manager.h"
 #include "chrome/common/importer/importer_data_types.h"
 
 namespace brave {
@@ -49,14 +52,19 @@ void AutoImportMuon() {
     return;
   }
 
-  const importer::SourceProfile& brave_profile =
+  const importer::SourceProfile& source_profile =
       importer_list->GetSourceProfileAt(brave_profile_index);
 
   uint16_t items_to_import = 0;
-  items_to_import |= brave_profile.services_supported;
+  items_to_import |= source_profile.services_supported;
 
-  if (profile_) {
-    LOG(INFO) << "I have a profile to import from";
+  // Gross, but good enough for government work? Seems to be a common
+  // part throughout the rest of the Brave codebase.
+  ProfileManager* profile_manager = g_browser_process->profile_manager();
+  Profile* current_profile = profile_manager->GetLastUsedProfile();
+
+  if (current_profile) {
+    LOG(INFO) << "I have a profile to import from: " << current_profile->GetDebugName();
   }
 }
 
