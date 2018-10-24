@@ -19,6 +19,63 @@
 
 namespace brave {
 
+// Copied outright from first_run.cc
+class ImportEndedObserver : public importer::ImporterProgressObserver {
+ public:
+  ImportEndedObserver() : ended_(false) {}
+  ~ImportEndedObserver() override {}
+
+  // importer::ImporterProgressObserver:
+  void ImportStarted() override {}
+  void ImportItemStarted(importer::ImportItem item) override {}
+  void ImportItemEnded(importer::ImportItem item) override {}
+  void ImportEnded() override {
+    ended_ = true;
+    if (!callback_for_import_end_.is_null())
+      callback_for_import_end_.Run();
+  }
+
+  void set_callback_for_import_end(const base::Closure& callback) {
+    callback_for_import_end_ = callback;
+  }
+
+  bool ended() const {
+    return ended_;
+  }
+
+ private:
+  // Set if the import has ended.
+  bool ended_;
+
+  base::Closure callback_for_import_end_;
+
+  DISALLOW_COPY_AND_ASSIGN(ImportEndedObserver);
+};
+
+void ImportFromSourceProfile(const importer::SourceProfile& source_profile,
+                             Profile* target_profile,
+                             uint16_t items_to_import) {
+  // Deletes itself
+  ExternalProcessImporterHost* importer_host =
+      new ExternalProcessImporterHost;
+  // Don't show the warning dialog if import fails
+  importer_host->set_headless();
+
+  ImportEndedObserver observer;
+  importer_host->set_observer(&observer);
+  importer_host->StartImportSettings(source_profile,
+                                     target_profile,
+                                     items_to_import,
+                                     new ProfileWriter(target_profile));
+  // If the import process has not errored out, block on it.
+  if (!observer.ended()) {
+    base::RunLoop loop;
+    observer.set_callback_for_import_end(loop.QuitClosure());
+    loop.Run();
+    observer.set_callback_for_import_end(base::Closure());
+  }
+}
+
 void AutoImportMuon() {
   LOG(INFO) << "In brave::AutoImportMuon";
   base::CommandLine& command_line =
@@ -67,30 +124,6 @@ void AutoImportMuon() {
   Profile* target_profile = profile_manager->GetLastUsedProfile();
 
   ImportFromSourceProfile(source_profile, target_profile, items_to_import);
-}
-
-void ImportFromSourceProfile(const importer::SourceProfile& source_profile,
-                             Profile* target_profile,
-                             uint16_t items_to_import) {
-  // Deletes itself
-  ExternalProcessImporterHost* importer_host =
-      new ExternalProcessImporterHost;
-  // Don't show the warning dialog if import fails
-  importer_host->set_headless();
-
-  ImportEndedObserver observer;
-  importer_host->set_observer(&observer);
-  importer_host->StartImportSettings(source_profile,
-                                     target_profile,
-                                     items_to_import,
-                                     new ProfileWriter(target_profile));
-  // If the import process has not errored out, block on it.
-  if (!observer.ended()) {
-    base::RunLoop loop;
-    observer.set_callback_for_import_end(loop.QuitClosure());
-    loop.Run();
-    observer.set_callback_for_import_end(base::Closure());
-  }
 }
 
 }
