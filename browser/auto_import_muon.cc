@@ -11,7 +11,9 @@
 #include "base/logging.h"
 #include "base/run_loop.h"
 #include "chrome/browser/browser_process.h"
+#include "chrome/browser/importer/external_process_importer_host.h"
 #include "chrome/browser/importer/importer_list.h"
+#include "chrome/browser/importer/importer_progress_observer.h"
 #include "chrome/browser/profiles/profile_manager.h"
 #include "chrome/common/importer/importer_data_types.h"
 
@@ -55,16 +57,39 @@ void AutoImportMuon() {
   const importer::SourceProfile& source_profile =
       importer_list->GetSourceProfileAt(brave_profile_index);
 
+  // Import every possible type of data from the Muon profile
   uint16_t items_to_import = 0;
   items_to_import |= source_profile.services_supported;
 
   // Gross, but good enough for government work? Seems to be a common
   // part throughout the rest of the Brave codebase.
   ProfileManager* profile_manager = g_browser_process->profile_manager();
-  Profile* current_profile = profile_manager->GetLastUsedProfile();
+  Profile* target_profile = profile_manager->GetLastUsedProfile();
 
-  if (current_profile) {
-    LOG(INFO) << "I have a profile to import from: " << current_profile->GetDebugName();
+  ImportFromSourceProfile(source_profile, target_profile, items_to_import);
+}
+
+void ImportFromSourceProfile(const importer::SourceProfile& source_profile,
+                             Profile* target_profile,
+                             uint16_t items_to_import) {
+  // Deletes itself
+  ExternalProcessImporterHost* importer_host =
+      new ExternalProcessImporterHost;
+  // Don't show the warning dialog if import fails
+  importer_host->set_headless();
+
+  ImportEndedObserver observer;
+  importer_host->set_observer(&observer);
+  importer_host->StartImportSettings(source_profile,
+                                     target_profile,
+                                     items_to_import,
+                                     new ProfileWriter(target_profile));
+  // If the import process has not errored out, block on it.
+  if (!observer.ended()) {
+    base::RunLoop loop;
+    observer.set_callback_for_import_end(loop.QuitClosure());
+    loop.Run();
+    observer.set_callback_for_import_end(base::Closure());
   }
 }
 
