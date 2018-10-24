@@ -60,6 +60,21 @@ std::unique_ptr<Profile> CreateBraveSyncProfile(const base::FilePath& path);
 std::unique_ptr<KeyedService> BuildFakeBookmarkModelForTests(
      content::BrowserContext* context);
 
+SyncRecordPtr SimpleBookmarkSyncRecord(
+    const int action,
+    const std::string& object_id,
+    const std::string& location,
+    const std::string& title,
+    const std::string& order,
+    const std::string& parent_object_id);
+
+SyncRecordPtr SimpleFolderSyncRecord(
+    const int action,
+    const std::string& title,
+    const std::string& order,
+    const std::string& parent_object_id,
+    const bool hide_in_toolbar);
+
 }  // namespace brave_sync
 
 #endif  // BRAVE_COMPONENTS_BRAVE_SYNC_TEST_UTIL_H_
