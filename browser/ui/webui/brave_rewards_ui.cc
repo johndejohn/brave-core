@@ -7,33 +7,33 @@
 #include "base/base64.h"
 #include "base/memory/weak_ptr.h"
 
-#include "brave/components/brave_rewards/browser/rewards_service.h"
-#include "brave/components/brave_rewards/browser/wallet_properties.h"
+#include "brave/browser/brave_rewards/add_funds_dialog.h"
+#include "brave/common/webui_url_constants.h"
 #include "brave/components/brave_rewards/browser/balance_report.h"
 #include "brave/components/brave_rewards/browser/rewards_notifications_service.h"
 #include "brave/components/brave_rewards/browser/rewards_notifications_service_factory.h"
 #include "brave/components/brave_rewards/browser/rewards_notifications_service_observer.h"
+#include "brave/components/brave_rewards/browser/rewards_service.h"
 #include "brave/components/brave_rewards/browser/rewards_service_factory.h"
 #include "brave/components/brave_rewards/browser/rewards_service_observer.h"
+#include "brave/components/brave_rewards/browser/wallet_properties.h"
 #include "brave/components/brave_rewards/resources/grit/brave_rewards_resources.h"
-#include "brave/common/webui_url_constants.h"
 #include "chrome/browser/profiles/profile.h"
-#include "content/public/browser/web_ui_message_handler.h"
+#include "content/public/browser/render_view_host.h"
+#include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_ui_data_source.h"
 #include "content/public/browser/web_ui_message_handler.h"
-#include "content/public/browser/web_contents.h"
-#include "content/public/browser/render_view_host.h"
 #include "content/public/common/bindings_policy.h"
-
 
 using content::WebUIMessageHandler;
 
 namespace {
 
 // The handler for Javascript messages for Brave about: pages
-class RewardsDOMHandler : public WebUIMessageHandler,
-                          public brave_rewards::RewardsNotificationsServiceObserver,
-                          public brave_rewards::RewardsServiceObserver {
+class RewardsDOMHandler
+    : public WebUIMessageHandler,
+      public brave_rewards::RewardsNotificationsServiceObserver,
+      public brave_rewards::RewardsServiceObserver {
  public:
   RewardsDOMHandler();
   ~RewardsDOMHandler() override;
@@ -47,6 +47,7 @@ class RewardsDOMHandler : public WebUIMessageHandler,
   void GetAllBalanceReports();
   void HandleCreateWalletRequested(const base::ListValue* args);
   void GetWalletProperties(const base::ListValue* args);
+  void AddFundsToWallet(const base::ListValue* args);
   void GetGrant(const base::ListValue* args);
   void GetGrantCaptcha(const base::ListValue* args);
   void GetWalletPassphrase(const base::ListValue* args);
@@ -55,7 +56,8 @@ class RewardsDOMHandler : public WebUIMessageHandler,
   void GetReconcileStamp(const base::ListValue* args);
   void GetAddresses(const base::ListValue* args);
   void SaveSetting(const base::ListValue* args);
-  void OnGetContentSiteList(std::unique_ptr<brave_rewards::ContentSiteList>, uint32_t record);
+  void OnGetContentSiteList(std::unique_ptr<brave_rewards::ContentSiteList>,
+                            uint32_t record);
   void GetBalanceReports(const base::ListValue* args);
   void ExcludePublisher(const base::ListValue* args);
   void RestorePublishers(const base::ListValue* args);
@@ -68,32 +70,37 @@ class RewardsDOMHandler : public WebUIMessageHandler,
 
   // RewardsServiceObserver implementation
   void OnWalletInitialized(brave_rewards::RewardsService* rewards_service,
-                       int error_code) override;
+                           int error_code) override;
   void OnWalletProperties(brave_rewards::RewardsService* rewards_service,
-      int error_code,
-      std::unique_ptr<brave_rewards::WalletProperties> wallet_properties) override;
+                          int error_code,
+                          std::unique_ptr<brave_rewards::WalletProperties>
+                              wallet_properties) override;
   void OnGrant(brave_rewards::RewardsService* rewards_service,
-                   unsigned int error_code,
-                   brave_rewards::Grant result) override;
+               unsigned int error_code,
+               brave_rewards::Grant result) override;
   void OnGrantCaptcha(brave_rewards::RewardsService* rewards_service,
-                          std::string image, std::string hint) override;
+                      std::string image,
+                      std::string hint) override;
   void OnRecoverWallet(brave_rewards::RewardsService* rewards_service,
                        unsigned int result,
                        double balance,
                        std::vector<brave_rewards::Grant> grants) override;
   void OnGrantFinish(brave_rewards::RewardsService* rewards_service,
-                       unsigned int result,
-                       brave_rewards::Grant grant) override;
-  void OnContentSiteUpdated(brave_rewards::RewardsService* rewards_service) override;
-  void OnExcludedSitesChanged(brave_rewards::RewardsService* rewards_service) override;
+                     unsigned int result,
+                     brave_rewards::Grant grant) override;
+  void OnContentSiteUpdated(
+      brave_rewards::RewardsService* rewards_service) override;
+  void OnExcludedSitesChanged(
+      brave_rewards::RewardsService* rewards_service) override;
   void OnReconcileComplete(brave_rewards::RewardsService* rewards_service,
                            unsigned int result,
                            const std::string& viewing_id,
                            const std::string& probi) override;
-  void OnRecurringDonationUpdated(brave_rewards::RewardsService* rewards_service,
-                                  brave_rewards::ContentSiteList) override;
+  void OnRecurringDonationUpdated(
+      brave_rewards::RewardsService* rewards_service,
+      brave_rewards::ContentSiteList) override;
   void OnCurrentTips(brave_rewards::RewardsService* rewards_service,
-                                  brave_rewards::ContentSiteList) override;
+                     brave_rewards::ContentSiteList) override;
 
   // RewardsNotificationsServiceObserver implementation
   void OnNotificationAdded(
@@ -108,14 +115,15 @@ class RewardsDOMHandler : public WebUIMessageHandler,
                                      rewards_notifications_service) override;
   void OnGetNotification(
       brave_rewards::RewardsNotificationsService* rewards_notifications_service,
-      const brave_rewards::RewardsNotificationsService::RewardsNotification& notification)
-      override;
+      const brave_rewards::RewardsNotificationsService::RewardsNotification&
+          notification) override;
   void OnGetAllNotifications(
       brave_rewards::RewardsNotificationsService* rewards_notifications_service,
       const brave_rewards::RewardsNotificationsService::
           RewardsNotificationsList& notifications_list) override;
 
-  brave_rewards::RewardsNotificationsService* rewards_notifications_service_;  // NOT OWNED
+  brave_rewards::RewardsNotificationsService*
+      rewards_notifications_service_;               // NOT OWNED
   brave_rewards::RewardsService* rewards_service_;  // NOT OWNED
   base::WeakPtrFactory<RewardsDOMHandler> weak_factory_;
 
@@ -132,63 +140,86 @@ RewardsDOMHandler::~RewardsDOMHandler() {
 }
 
 void RewardsDOMHandler::RegisterMessages() {
-  web_ui()->RegisterMessageCallback("brave_rewards.createWalletRequested",
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.createWalletRequested",
       base::BindRepeating(&RewardsDOMHandler::HandleCreateWalletRequested,
                           base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getWalletProperties",
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getWalletProperties",
       base::BindRepeating(&RewardsDOMHandler::GetWalletProperties,
                           base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getGrant",
-                                    base::BindRepeating(&RewardsDOMHandler::GetGrant,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getGrantCaptcha",
-                                    base::BindRepeating(&RewardsDOMHandler::GetGrantCaptcha,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getWalletPassphrase",
-                                    base::BindRepeating(&RewardsDOMHandler::GetWalletPassphrase,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.recoverWallet",
-                                    base::BindRepeating(&RewardsDOMHandler::RecoverWallet,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.solveGrantCaptcha",
-                                    base::BindRepeating(&RewardsDOMHandler::SolveGrantCaptcha,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getReconcileStamp",
-                                    base::BindRepeating(&RewardsDOMHandler::GetReconcileStamp,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getAddresses",
-                                    base::BindRepeating(&RewardsDOMHandler::GetAddresses,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.saveSetting",
-                                    base::BindRepeating(&RewardsDOMHandler::SaveSetting,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getBalanceReports",
-                                    base::BindRepeating(&RewardsDOMHandler::GetBalanceReports,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.excludePublisher",
-                                    base::BindRepeating(&RewardsDOMHandler::ExcludePublisher,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.restorePublishers",
-                                    base::BindRepeating(&RewardsDOMHandler::RestorePublishers,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.checkWalletExistence",
-                                    base::BindRepeating(&RewardsDOMHandler::WalletExists,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getContributionAmount",
-                                    base::BindRepeating(&RewardsDOMHandler::GetContributionAmount,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.removeRecurring",
-                                    base::BindRepeating(&RewardsDOMHandler::RemoveRecurring,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.updateRecurringDonationsList",
-                                    base::BindRepeating(&RewardsDOMHandler::UpdateRecurringDonationsList,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.updateTipsList",
-                                    base::BindRepeating(&RewardsDOMHandler::UpdateTipsList,
-                                                        base::Unretained(this)));
-  web_ui()->RegisterMessageCallback("brave_rewards.getContributionList",
-                                    base::BindRepeating(&RewardsDOMHandler::GetContributionList,
-                                                        base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.addFundsToWallet",
+      base::BindRepeating(&RewardsDOMHandler::AddFundsToWallet,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getGrant",
+      base::BindRepeating(&RewardsDOMHandler::GetGrant,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getGrantCaptcha",
+      base::BindRepeating(&RewardsDOMHandler::GetGrantCaptcha,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getWalletPassphrase",
+      base::BindRepeating(&RewardsDOMHandler::GetWalletPassphrase,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.recoverWallet",
+      base::BindRepeating(&RewardsDOMHandler::RecoverWallet,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.solveGrantCaptcha",
+      base::BindRepeating(&RewardsDOMHandler::SolveGrantCaptcha,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getReconcileStamp",
+      base::BindRepeating(&RewardsDOMHandler::GetReconcileStamp,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getAddresses",
+      base::BindRepeating(&RewardsDOMHandler::GetAddresses,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.saveSetting",
+      base::BindRepeating(&RewardsDOMHandler::SaveSetting,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getBalanceReports",
+      base::BindRepeating(&RewardsDOMHandler::GetBalanceReports,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.excludePublisher",
+      base::BindRepeating(&RewardsDOMHandler::ExcludePublisher,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.restorePublishers",
+      base::BindRepeating(&RewardsDOMHandler::RestorePublishers,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.checkWalletExistence",
+      base::BindRepeating(&RewardsDOMHandler::WalletExists,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getContributionAmount",
+      base::BindRepeating(&RewardsDOMHandler::GetContributionAmount,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.removeRecurring",
+      base::BindRepeating(&RewardsDOMHandler::RemoveRecurring,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.updateRecurringDonationsList",
+      base::BindRepeating(&RewardsDOMHandler::UpdateRecurringDonationsList,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.updateTipsList",
+      base::BindRepeating(&RewardsDOMHandler::UpdateTipsList,
+                          base::Unretained(this)));
+  web_ui()->RegisterMessageCallback(
+      "brave_rewards.getContributionList",
+      base::BindRepeating(&RewardsDOMHandler::GetContributionList,
+                          base::Unretained(this)));
 }
 
 void RewardsDOMHandler::Init() {
@@ -205,7 +236,8 @@ void RewardsDOMHandler::Init() {
 
 void RewardsDOMHandler::GetAllBalanceReports() {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
-    std::map<std::string, brave_rewards::BalanceReport> reports = rewards_service_->GetAllBalanceReports();
+    std::map<std::string, brave_rewards::BalanceReport> reports =
+        rewards_service_->GetAllBalanceReports();
 
     if (reports.empty()) {
       return;
@@ -228,11 +260,13 @@ void RewardsDOMHandler::GetAllBalanceReports() {
       newReports.SetDictionary(report.first, std::move(newReport));
     }
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.balanceReports", newReports);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.balanceReports",
+                                           newReports);
   }
 }
 
-void RewardsDOMHandler::HandleCreateWalletRequested(const base::ListValue* args) {
+void RewardsDOMHandler::HandleCreateWalletRequested(
+    const base::ListValue* args) {
   if (!rewards_service_)
     return;
 
@@ -244,6 +278,22 @@ void RewardsDOMHandler::GetWalletProperties(const base::ListValue* args) {
     return;
 
   rewards_service_->GetWalletProperties();
+}
+
+void RewardsDOMHandler::AddFundsToWallet(const base::ListValue* args) {
+  if (!rewards_service_)
+    return;
+
+  std::map<std::string, std::string> addresses =
+      rewards_service_->GetAddresses();
+  if (addresses.empty())
+    return;
+
+  content::WebContents* contents = web_ui()->GetWebContents();
+  if (!contents)
+    return;
+
+  ::brave_rewards::OpenAddFundsDialog(contents, addresses);
 }
 
 void RewardsDOMHandler::OnWalletInitialized(
@@ -262,7 +312,6 @@ void RewardsDOMHandler::OnWalletProperties(
     brave_rewards::RewardsService* rewards_service,
     int error_code,
     std::unique_ptr<brave_rewards::WalletProperties> wallet_properties) {
-
   if (web_ui()->CanCallJavascript()) {
     base::DictionaryValue result;
     result.SetInteger("status", error_code);
@@ -302,14 +351,14 @@ void RewardsDOMHandler::OnWalletProperties(
 
     result.SetDictionary("wallet", std::move(walletInfo));
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.walletProperties", result);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.walletProperties",
+                                           result);
   }
 }
 
-void RewardsDOMHandler::OnGrant(
-    brave_rewards::RewardsService* rewards_service,
-    unsigned int result,
-    brave_rewards::Grant grant) {
+void RewardsDOMHandler::OnGrant(brave_rewards::RewardsService* rewards_service,
+                                unsigned int result,
+                                brave_rewards::Grant grant) {
   if (web_ui()->CanCallJavascript()) {
     base::DictionaryValue* newGrant = new base::DictionaryValue();
     newGrant->SetInteger("status", result);
@@ -341,7 +390,8 @@ void RewardsDOMHandler::OnGrantCaptcha(
     captcha.SetString("image", std::move(encoded_string));
     captcha.SetString("hint", hint);
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.grantCaptcha", captcha);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.grantCaptcha",
+                                           captcha);
   }
 }
 
@@ -355,11 +405,12 @@ void RewardsDOMHandler::GetWalletPassphrase(const base::ListValue* args) {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
     std::string pass = rewards_service_->GetWalletPassphrase();
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.walletPassphrase", base::Value(pass));
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.walletPassphrase",
+                                           base::Value(pass));
   }
 }
 
-void RewardsDOMHandler::RecoverWallet(const base::ListValue *args) {
+void RewardsDOMHandler::RecoverWallet(const base::ListValue* args) {
   if (rewards_service_) {
     std::string passPhrase;
     args->GetString(0, &passPhrase);
@@ -386,11 +437,12 @@ void RewardsDOMHandler::OnRecoverWallet(
     }
     recover->SetList("grants", std::move(newGrants));
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.recoverWalletData", *recover);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.recoverWalletData",
+                                           *recover);
   }
 }
 
-void RewardsDOMHandler::SolveGrantCaptcha(const base::ListValue *args) {
+void RewardsDOMHandler::SolveGrantCaptcha(const base::ListValue* args) {
   if (rewards_service_) {
     std::string solution;
     args->GetString(0, &solution);
@@ -408,7 +460,8 @@ void RewardsDOMHandler::OnGrantFinish(
     finish->SetInteger("expiryTime", grant.expiryTime);
     finish->SetString("probi", grant.probi);
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.grantFinish", *finish);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.grantFinish",
+                                           *finish);
     GetAllBalanceReports();
   }
 }
@@ -417,13 +470,15 @@ void RewardsDOMHandler::GetReconcileStamp(const base::ListValue* args) {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
     std::string stamp = std::to_string(rewards_service_->GetReconcileStamp());
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.reconcileStamp", base::Value(stamp));
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.reconcileStamp",
+                                           base::Value(stamp));
   }
 }
 
 void RewardsDOMHandler::GetAddresses(const base::ListValue* args) {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
-    std::map<std::string, std::string> addresses = rewards_service_->GetAddresses();
+    std::map<std::string, std::string> addresses =
+        rewards_service_->GetAddresses();
 
     base::DictionaryValue data;
     data.SetString("BAT", addresses["BAT"]);
@@ -435,45 +490,46 @@ void RewardsDOMHandler::GetAddresses(const base::ListValue* args) {
   }
 }
 
-void RewardsDOMHandler::OnContentSiteUpdated(brave_rewards::RewardsService* rewards_service) {
-  rewards_service_->GetContentSiteList(0, 0,
-      base::Bind(&RewardsDOMHandler::OnGetContentSiteList, weak_factory_.GetWeakPtr()));
+void RewardsDOMHandler::OnContentSiteUpdated(
+    brave_rewards::RewardsService* rewards_service) {
+  rewards_service_->GetContentSiteList(
+      0, 0,
+      base::Bind(&RewardsDOMHandler::OnGetContentSiteList,
+                 weak_factory_.GetWeakPtr()));
 }
 
-void RewardsDOMHandler::OnExcludedSitesChanged(brave_rewards::RewardsService* rewards_service) {
+void RewardsDOMHandler::OnExcludedSitesChanged(
+    brave_rewards::RewardsService* rewards_service) {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
     int num = (int)rewards_service_->GetNumExcludedSites();
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.numExcludedSites", base::Value(num));
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.numExcludedSites",
+                                           base::Value(num));
   }
 }
 
 void RewardsDOMHandler::OnNotificationAdded(
     brave_rewards::RewardsNotificationsService* rewards_notifications_service,
     const brave_rewards::RewardsNotificationsService::RewardsNotification&
-        notification) {
-}
+        notification) {}
 
 void RewardsDOMHandler::OnNotificationDeleted(
     brave_rewards::RewardsNotificationsService* rewards_notifications_service,
     const brave_rewards::RewardsNotificationsService::RewardsNotification&
-        notification) {
-}
+        notification) {}
 
 void RewardsDOMHandler::OnAllNotificationsDeleted(
-  brave_rewards::RewardsNotificationsService* rewards_notifications_service) {
+    brave_rewards::RewardsNotificationsService* rewards_notifications_service) {
 }
 
 void RewardsDOMHandler::OnGetNotification(
     brave_rewards::RewardsNotificationsService* rewards_notifications_service,
     const brave_rewards::RewardsNotificationsService::RewardsNotification&
-        notification) {
-}
+        notification) {}
 
 void RewardsDOMHandler::OnGetAllNotifications(
     brave_rewards::RewardsNotificationsService* rewards_notifications_service,
     const brave_rewards::RewardsNotificationsService::RewardsNotificationsList&
-        notifications_list) {
-}
+        notifications_list) {}
 
 void RewardsDOMHandler::SaveSetting(const base::ListValue* args) {
   if (rewards_service_) {
@@ -514,7 +570,7 @@ void RewardsDOMHandler::SaveSetting(const base::ListValue* args) {
   }
 }
 
-void RewardsDOMHandler::ExcludePublisher(const base::ListValue *args) {
+void RewardsDOMHandler::ExcludePublisher(const base::ListValue* args) {
   if (rewards_service_) {
     std::string publisherKey;
     args->GetString(0, &publisherKey);
@@ -522,13 +578,15 @@ void RewardsDOMHandler::ExcludePublisher(const base::ListValue *args) {
   }
 }
 
-void RewardsDOMHandler::RestorePublishers(const base::ListValue *args) {
+void RewardsDOMHandler::RestorePublishers(const base::ListValue* args) {
   if (rewards_service_) {
     rewards_service_->RestorePublishers();
   }
 }
 
-void RewardsDOMHandler::OnGetContentSiteList(std::unique_ptr<brave_rewards::ContentSiteList> list, uint32_t record) {
+void RewardsDOMHandler::OnGetContentSiteList(
+    std::unique_ptr<brave_rewards::ContentSiteList> list,
+    uint32_t record) {
   if (web_ui()->CanCallJavascript()) {
     auto publishers = std::make_unique<base::ListValue>();
     for (auto const& item : *list) {
@@ -545,10 +603,10 @@ void RewardsDOMHandler::OnGetContentSiteList(std::unique_ptr<brave_rewards::Cont
       publishers->Append(std::move(publisher));
     }
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.contributeList", *publishers);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.contributeList",
+                                           *publishers);
   }
 }
-
 
 void RewardsDOMHandler::GetBalanceReports(const base::ListValue* args) {
   GetAllBalanceReports();
@@ -558,7 +616,8 @@ void RewardsDOMHandler::WalletExists(const base::ListValue* args) {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
     bool exist = rewards_service_->IsWalletCreated();
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.walletExists", base::Value(exist));
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.walletExists",
+                                           base::Value(exist));
   }
 }
 
@@ -566,22 +625,25 @@ void RewardsDOMHandler::GetContributionAmount(const base::ListValue* args) {
   if (rewards_service_ && web_ui()->CanCallJavascript()) {
     double amount = rewards_service_->GetContributionAmount();
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.contributionAmount", base::Value(amount));
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.contributionAmount",
+                                           base::Value(amount));
   }
 }
 
-void RewardsDOMHandler::OnReconcileComplete(brave_rewards::RewardsService* rewards_service,
-  unsigned int result,
-  const std::string& viewing_id,
-  const std::string& probi) {
+void RewardsDOMHandler::OnReconcileComplete(
+    brave_rewards::RewardsService* rewards_service,
+    unsigned int result,
+    const std::string& viewing_id,
+    const std::string& probi) {
   GetAllBalanceReports();
   OnContentSiteUpdated(rewards_service);
   GetReconcileStamp(nullptr);
 }
 
-void RewardsDOMHandler::OnRecurringDonationUpdated(brave_rewards::RewardsService* rewards_service,
-                                                   const brave_rewards::ContentSiteList list) {
-   if (web_ui()->CanCallJavascript()) {
+void RewardsDOMHandler::OnRecurringDonationUpdated(
+    brave_rewards::RewardsService* rewards_service,
+    const brave_rewards::ContentSiteList list) {
+  if (web_ui()->CanCallJavascript()) {
     auto publishers = std::make_unique<base::ListValue>();
     for (auto const& item : list) {
       auto publisher = std::make_unique<base::DictionaryValue>();
@@ -598,13 +660,15 @@ void RewardsDOMHandler::OnRecurringDonationUpdated(brave_rewards::RewardsService
       publishers->Append(std::move(publisher));
     }
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.recurringDonationUpdate", *publishers);
+    web_ui()->CallJavascriptFunctionUnsafe(
+        "brave_rewards.recurringDonationUpdate", *publishers);
   }
 }
 
-void RewardsDOMHandler::OnCurrentTips(brave_rewards::RewardsService* rewards_service,
-                                                   const brave_rewards::ContentSiteList list) {
-   if (web_ui()->CanCallJavascript()) {
+void RewardsDOMHandler::OnCurrentTips(
+    brave_rewards::RewardsService* rewards_service,
+    const brave_rewards::ContentSiteList list) {
+  if (web_ui()->CanCallJavascript()) {
     auto publishers = std::make_unique<base::ListValue>();
     for (auto const& item : list) {
       auto publisher = std::make_unique<base::DictionaryValue>();
@@ -621,11 +685,12 @@ void RewardsDOMHandler::OnCurrentTips(brave_rewards::RewardsService* rewards_ser
       publishers->Append(std::move(publisher));
     }
 
-    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.currentTips", *publishers);
+    web_ui()->CallJavascriptFunctionUnsafe("brave_rewards.currentTips",
+                                           *publishers);
   }
 }
 
-void RewardsDOMHandler::RemoveRecurring(const base::ListValue *args) {
+void RewardsDOMHandler::RemoveRecurring(const base::ListValue* args) {
   if (rewards_service_) {
     std::string publisherKey;
     args->GetString(0, &publisherKey);
@@ -633,19 +698,20 @@ void RewardsDOMHandler::RemoveRecurring(const base::ListValue *args) {
   }
 }
 
-void RewardsDOMHandler::UpdateRecurringDonationsList(const base::ListValue *args) {
+void RewardsDOMHandler::UpdateRecurringDonationsList(
+    const base::ListValue* args) {
   if (rewards_service_) {
     rewards_service_->UpdateRecurringDonationsList();
   }
 }
 
-void RewardsDOMHandler::UpdateTipsList(const base::ListValue *args) {
+void RewardsDOMHandler::UpdateTipsList(const base::ListValue* args) {
   if (rewards_service_) {
     rewards_service_->UpdateTipsList();
   }
 }
 
-void RewardsDOMHandler::GetContributionList(const base::ListValue *args) {
+void RewardsDOMHandler::GetContributionList(const base::ListValue* args) {
   if (rewards_service_) {
     OnContentSiteUpdated(rewards_service_);
   }
@@ -654,14 +720,15 @@ void RewardsDOMHandler::GetContributionList(const base::ListValue *args) {
 }  // namespace
 
 BraveRewardsUI::BraveRewardsUI(content::WebUI* web_ui, const std::string& name)
-    : BasicUI(web_ui, name, kRewardsJS,
-        IDR_BRAVE_REWARDS_JS, IDR_BRAVE_REWARDS_HTML) {
-
+    : BasicUI(web_ui,
+              name,
+              kRewardsJS,
+              IDR_BRAVE_REWARDS_JS,
+              IDR_BRAVE_REWARDS_HTML) {
   auto handler_owner = std::make_unique<RewardsDOMHandler>();
-  RewardsDOMHandler * handler = handler_owner.get();
+  RewardsDOMHandler* handler = handler_owner.get();
   web_ui->AddMessageHandler(std::move(handler_owner));
   handler->Init();
 }
 
-BraveRewardsUI::~BraveRewardsUI() {
-}
+BraveRewardsUI::~BraveRewardsUI() {}
