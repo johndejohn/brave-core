@@ -16,6 +16,8 @@
 
 FORWARD_DECLARE_TEST(BraveSyncServiceTest, BookmarkAdded);
 FORWARD_DECLARE_TEST(BraveSyncServiceTest, BookmarkDeleted);
+FORWARD_DECLARE_TEST(BraveSyncServiceTest, GetSyncWords);
+FORWARD_DECLARE_TEST(BraveSyncServiceTest, GetSeed);
 
 class BraveSyncServiceTest;
 
@@ -71,6 +73,8 @@ class BraveSyncServiceImpl : public BraveSyncService,
  private:
   FRIEND_TEST_ALL_PREFIXES(::BraveSyncServiceTest, BookmarkAdded);
   FRIEND_TEST_ALL_PREFIXES(::BraveSyncServiceTest, BookmarkDeleted);
+  FRIEND_TEST_ALL_PREFIXES(::BraveSyncServiceTest, GetSyncWords);
+  FRIEND_TEST_ALL_PREFIXES(::BraveSyncServiceTest, GetSeed);
   friend class ::BraveSyncServiceTest;
 
   // SyncMessageHandler overrides

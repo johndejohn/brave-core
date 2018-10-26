@@ -621,7 +621,6 @@ void BookmarkChangeProcessor::SendUnsynced(
   }
 }
 
-void BookmarkChangeProcessor::InitialSync() {
-}
+void BookmarkChangeProcessor::InitialSync() {}
 
 }  // namespace brave_sync
