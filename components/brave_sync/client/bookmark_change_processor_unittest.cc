@@ -135,6 +135,7 @@ TEST_F(BraveBookmarkChangeProcessorTest, StartObserver) {
   const auto* node_a = model()->AddURL(model()->other_node(), 0,
                                        base::ASCIIToUTF16("A.com - title"),
                                        GURL("https://a.com/"));
+  model()->SetTitle(node_a, base::ASCIIToUTF16("A.com - title - upated"));
   std::string last_updated_time_a;
   node_a->GetMetaInfo("last_updated_time", &last_updated_time_a);
   EXPECT_TRUE(last_updated_time_a.empty());
@@ -144,6 +145,7 @@ TEST_F(BraveBookmarkChangeProcessorTest, StartObserver) {
   const auto* node_b = model()->AddURL(model()->other_node(), 0,
                                        base::ASCIIToUTF16("B.com - title"),
                                        GURL("https://b.com/"));
+  model()->SetTitle(node_b, base::ASCIIToUTF16("B.com - title - upated"));
   std::string last_updated_time_b;
   node_b->GetMetaInfo("last_updated_time", &last_updated_time_b);
   EXPECT_TRUE(!last_updated_time_b.empty());
@@ -155,6 +157,7 @@ TEST_F(BraveBookmarkChangeProcessorTest, StopObserver) {
   const auto* node_a = model()->AddURL(model()->other_node(), 0,
                                        base::ASCIIToUTF16("A.com - title"),
                                        GURL("https://a.com/"));
+  model()->SetTitle(node_a, base::ASCIIToUTF16("A.com - title - upated"));
   std::string last_updated_time_a;
   node_a->GetMetaInfo("last_updated_time", &last_updated_time_a);
   EXPECT_TRUE(!last_updated_time_a.empty());
@@ -164,6 +167,7 @@ TEST_F(BraveBookmarkChangeProcessorTest, StopObserver) {
   const auto* node_b = model()->AddURL(model()->other_node(), 0,
                                        base::ASCIIToUTF16("B.com - title"),
                                        GURL("https://b.com/"));
+  model()->SetTitle(node_b, base::ASCIIToUTF16("B.com - title - upated"));
   std::string last_updated_time_b;
   node_b->GetMetaInfo("last_updated_time", &last_updated_time_b);
   EXPECT_TRUE(last_updated_time_b.empty());
@@ -203,6 +207,8 @@ void BraveBookmarkChangeProcessorTest::AddSimpleHierarchy(
 }
 
 TEST_F(BraveBookmarkChangeProcessorTest, Reset) {
+  // Reset does clear of the metainfo, but
+  // to fillup the metainfo now need to send it to sync
   change_processor()->Start();
 
   const BookmarkNode* folder1;
@@ -210,6 +216,8 @@ TEST_F(BraveBookmarkChangeProcessorTest, Reset) {
   const BookmarkNode* node_b;
   const BookmarkNode* node_c;
   AddSimpleHierarchy(&folder1, &node_a, &node_b, &node_c);
+
+  change_processor()->SendUnsynced(base::TimeDelta::FromMinutes(10));
 
   EXPECT_TRUE(HasAnySyncMetaInfo(folder1));
   EXPECT_TRUE(HasAnySyncMetaInfo(node_a));
@@ -224,30 +232,9 @@ TEST_F(BraveBookmarkChangeProcessorTest, Reset) {
   EXPECT_FALSE(HasAnySyncMetaInfo(node_c));
 }
 
-TEST_F(BraveBookmarkChangeProcessorTest, InitialSync) {
-  //uint64_t InitialSync() override;
-
-  // This is invoked after sync is enabled and initialized.
-  // Quite oposite to reset. Ret val is the number of nodes sent to sync
-
-  const BookmarkNode* folder1;
-  const BookmarkNode* node_a;
-  const BookmarkNode* node_b;
-  const BookmarkNode* node_c;
-  AddSimpleHierarchy(&folder1, &node_a, &node_b, &node_c);
-
-  EXPECT_FALSE(HasAnySyncMetaInfo(folder1));
-  EXPECT_FALSE(HasAnySyncMetaInfo(node_a));
-  EXPECT_FALSE(HasAnySyncMetaInfo(node_b));
-  EXPECT_FALSE(HasAnySyncMetaInfo(node_c));
-
-  auto nodes_count = change_processor()->InitialSync();
-  EXPECT_EQ(nodes_count, 4u);
-
-  EXPECT_TRUE(HasAnySyncMetaInfo(folder1));
-  EXPECT_TRUE(HasAnySyncMetaInfo(node_a));
-  EXPECT_TRUE(HasAnySyncMetaInfo(node_b));
-  EXPECT_TRUE(HasAnySyncMetaInfo(node_c));
+TEST_F(BraveBookmarkChangeProcessorTest, DISABLED_InitialSync) {
+  // BookmarkChangeProcessor::InitialSync does not do anything now
+  // All work for obtaining order is done in background.js
 }
 
 void BraveBookmarkChangeProcessorTest::BookmarkAddedImpl() {
